@@ -1,0 +1,1 @@
+http://jsru.kb.nl/sru?version=1.2&operation=searchRetrieve&x-collection=GGC&query=EuropeanaTravel:131H26&recordSchema=dcx&startRecord=1&maximumRecords=1000
