@@ -1521,7 +1521,7 @@
                             "dc:date": "4 nov. 1661",
                             "dcterms:extent": "Papier, 1 fol",
                             "dcterms:isReferencedBy": "Vgl. de publicatie in J. Heyblocq, Farrago Latino-Belgica. Amsterdam 1662, p. 240-241",
-                            "dc:creator": "Dubbels, Pieter (1645 fl.)",
+                            "dc:creator": "Dubbels, Pieter (1625-1673)",
                             "dcx:recordIdentifier": {
                                 "xsi:type": "dcterms:URI",
                                 "content": "http://opc4.kb.nl/DB=1/PPN?PPN=390168521"
@@ -1577,7 +1577,7 @@
                             "dc:date": "4 nov. 1661",
                             "dcterms:extent": "Papier, 1 fol",
                             "dcterms:isReferencedBy": "Vgl. de publicatie in J. Heyblocq, Farrago Latino-Belgica. Amsterdam 1662, p. 240-241",
-                            "dc:creator": "Dubbels, Pieter (1645 fl.)",
+                            "dc:creator": "Dubbels, Pieter (1625-1673)",
                             "dcx:recordIdentifier": {
                                 "xsi:type": "dcterms:URI",
                                 "content": "http://opc4.kb.nl/DB=1/PPN?PPN=390168521"
@@ -10523,6 +10523,84 @@
                         "srw_dc:dc": {
                             "dc:identifier": [
                                 {
+                                    "dcx:anchorText": "Afbeelding (155)",
+                                    "xsi:type": "dcterms:URI",
+                                    "content": "http://resolver.kb.nl/resolve?urn=EuropeanaTravel:131H26:155"
+                                },
+                                {
+                                    "xsi:type": "dcterms:URI",
+                                    "content": "http://resolver.kb.nl/resolve?urn=PPN:390432024"
+                                },
+                                {
+                                    "xsi:type": "dcterms:URI",
+                                    "content": "http://resolver.kb.nl/resolve?urn=PPN:390432016"
+                                },
+                                {
+                                    "xsi:type": "OCLC",
+                                    "content": 902948334
+                                },
+                                {
+                                    "xsi:type": "OCLC",
+                                    "content": 902948408
+                                }
+                            ],
+                            "dc:language": {
+                                "xml:lang": "en",
+                                "content": "Latin"
+                            },
+                            "dc:date": "[s.a]",
+                            "dcterms:extent": "Papier, 1 fol",
+                            "dc:creator": "Arenbergh, Jan van (1628-voor 1670)",
+                            "dcx:recordIdentifier": [
+                                {
+                                    "xsi:type": "dcterms:URI",
+                                    "content": "http://opc4.kb.nl/DB=1/PPN?PPN=390432024"
+                                },
+                                {
+                                    "xsi:type": "dcterms:URI",
+                                    "content": "http://opc4.kb.nl/DB=1/PPN?PPN=390432016"
+                                }
+                            ],
+                            "dc:title": {
+                                "xml:lang": "la",
+                                "xsi:type": "dcx:maintitle",
+                                "content": "Albuminscriptie van Jan van Arenberg met later toegevoegde tekening van een landschap van onbekende maker"
+                            },
+                            "dcterms:isPartOf": {
+                                "dcx:recordIdentifier": "AC:310919592",
+                                "content": "Album amicorum van J. Heyblocq ; p. 155"
+                            },
+                            "dcterms:hasFormat": [
+                                {
+                                    "dcx:recordIdentifier": "AC:31102307X",
+                                    "content": "Albuminscriptie"
+                                },
+                                {
+                                    "dcx:recordIdentifier": "AC:311023088",
+                                    "content": "Tekening"
+                                }
+                            ],
+                            "dcx:annotation": [
+                                "Tekening van een landschap",
+                                {
+                                    "dcx:itemId": 1056321857,
+                                    "content": "Exemplaar met signatuur: Digitaal bestand"
+                                },
+                                {
+                                    "dcx:label": "illustratievermelding",
+                                    "content": "ill"
+                                },
+                                "Waarschijnlijk hoort de schets niet bij de inscriptie van Van Arenberg op dezelfde pagina maar is deze later door een anonymus toegevoegd"
+                            ]
+                        }
+                    },
+                    "srw:recordPosition": 192
+                },
+                {
+                    "srw:recordData": {
+                        "srw_dc:dc": {
+                            "dc:identifier": [
+                                {
                                     "dcx:anchorText": "Afbeelding (237)",
                                     "xsi:type": "dcterms:URI",
                                     "content": "http://resolver.kb.nl/resolve?urn=EuropeanaTravel:131H26:237"
@@ -10536,12 +10614,12 @@
                                     "content": 902918579
                                 },
                                 {
-                                    "xsi:type": "dcterms:URI",
-                                    "content": "http://resolver.kb.nl/resolve?urn=PPN:39017839X"
-                                },
-                                {
                                     "xsi:type": "OCLC",
                                     "content": 902915273
+                                },
+                                {
+                                    "xsi:type": "dcterms:URI",
+                                    "content": "http://resolver.kb.nl/resolve?urn=PPN:39017839X"
                                 }
                             ],
                             "dc:language": {
@@ -12218,58 +12296,6 @@
                         "srw_dc:dc": {
                             "dc:identifier": [
                                 {
-                                    "dcx:anchorText": "Afbeelding (155)",
-                                    "xsi:type": "dcterms:URI",
-                                    "content": "http://resolver.kb.nl/resolve?urn=EuropeanaTravel:131H26:155"
-                                },
-                                {
-                                    "xsi:type": "dcterms:URI",
-                                    "content": "http://resolver.kb.nl/resolve?urn=PPN:390432016"
-                                },
-                                {
-                                    "xsi:type": "OCLC",
-                                    "content": 902948334
-                                }
-                            ],
-                            "dc:date": "[s.a]",
-                            "dcterms:extent": "Papier, 1 fol",
-                            "dcx:recordIdentifier": {
-                                "xsi:type": "dcterms:URI",
-                                "content": "http://opc4.kb.nl/DB=1/PPN?PPN=390432016"
-                            },
-                            "dc:title": {
-                                "xsi:type": "dcx:maintitle",
-                                "content": "Tekening"
-                            },
-                            "dcx:annotation": [
-                                {
-                                    "dcx:label": "illustratievermelding",
-                                    "content": "ill"
-                                },
-                                "Waarschijnlijk hoort de schets niet bij de inscriptie van Van Arenberg op dezelfde pagina maar is deze later door een anonymus toegevoegd",
-                                "Tekening: Landschap",
-                                {
-                                    "dcx:itemId": 1056321849,
-                                    "content": "Exemplaar met signatuur: Digitaal bestand"
-                                }
-                            ],
-                            "dcterms:isPartOf": {
-                                "dcx:recordIdentifier": "AC:310919592",
-                                "content": "Album amicorum van J. Heyblocq ; p. 155"
-                            },
-                            "dcterms:hasFormat": {
-                                "dcx:recordIdentifier": "AC:311023088",
-                                "content": "Tekening"
-                            }
-                        }
-                    },
-                    "srw:recordPosition": 190
-                },
-                {
-                    "srw:recordData": {
-                        "srw_dc:dc": {
-                            "dc:identifier": [
-                                {
                                     "dcx:anchorText": "Afbeelding (177)",
                                     "xsi:type": "dcterms:URI",
                                     "content": "http://resolver.kb.nl/resolve?urn=EuropeanaTravel:131H26:177"
@@ -12314,56 +12340,6 @@
                         }
                     },
                     "srw:recordPosition": 191
-                },
-                {
-                    "srw:recordData": {
-                        "srw_dc:dc": {
-                            "dc:identifier": [
-                                {
-                                    "dcx:anchorText": "Afbeelding (155)",
-                                    "xsi:type": "dcterms:URI",
-                                    "content": "http://resolver.kb.nl/resolve?urn=EuropeanaTravel:131H26:155"
-                                },
-                                {
-                                    "xsi:type": "dcterms:URI",
-                                    "content": "http://resolver.kb.nl/resolve?urn=PPN:390432024"
-                                },
-                                {
-                                    "xsi:type": "OCLC",
-                                    "content": 902948408
-                                }
-                            ],
-                            "dc:language": {
-                                "xml:lang": "en",
-                                "content": "Latin"
-                            },
-                            "dc:date": "[s.a]",
-                            "dcterms:extent": "Papier, 1 fol",
-                            "dc:creator": "Arenbergh, Jan van (1628-voor 1670)",
-                            "dcx:recordIdentifier": {
-                                "xsi:type": "dcterms:URI",
-                                "content": "http://opc4.kb.nl/DB=1/PPN?PPN=390432024"
-                            },
-                            "dc:title": {
-                                "xml:lang": "la",
-                                "xsi:type": "dcx:maintitle",
-                                "content": "Albuminscriptie"
-                            },
-                            "dcterms:isPartOf": {
-                                "dcx:recordIdentifier": "AC:310919592",
-                                "content": "Album amicorum van J. Heyblocq ; p. 155"
-                            },
-                            "dcterms:hasFormat": {
-                                "dcx:recordIdentifier": "AC:31102307X",
-                                "content": "Albuminscriptie"
-                            },
-                            "dcx:annotation": {
-                                "dcx:itemId": 1056321857,
-                                "content": "Exemplaar met signatuur: Digitaal bestand"
-                            }
-                        }
-                    },
-                    "srw:recordPosition": 192
                 },
                 {
                     "srw:recordData": {
@@ -12439,7 +12415,7 @@
                             },
                             "dc:date": "[s.a]",
                             "dcterms:extent": "Papier, 1 fol",
-                            "dc:creator": "Dubbels, Pieter (1645 fl.)",
+                            "dc:creator": "Dubbels, Pieter (1625-1673)",
                             "dcx:recordIdentifier": {
                                 "xsi:type": "dcterms:URI",
                                 "content": "http://opc4.kb.nl/DB=1/PPN?PPN=390432040"

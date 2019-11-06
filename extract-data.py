@@ -2,13 +2,28 @@ import os, os.path
 import json
 import requests
 import re
+import urllib
+from urllib.request import urlretrieve
 
-jsonfile="heyblocq-KBcatalogus_31102019-v2.json"
+#download all album images to imagefolder
+def imagedownload(imageurl):
+    outputdirname="images"
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    outputdir=os.path.join(current_dir, outputdirname)
+    os.chdir(outputdir)
+    # download all files to disk
+    localfilenumber = imageurl.split(':')[-1]
+    #localfile_full = 'Beschrijving-' + 'maker-' + 'datum-' + 'plaats'+  ' - Album Amicorum Jacob Heyblocq - KB131H26_' + str(localfilenumber) + '.jpg' #AAJH_250#
+    localfile_temp = 'Album Amicorum Jacob Heyblocq - KB131H26_' + str(localfilenumber) + '.jpg'  # AAJH_250#
+    #print(localfile_temp)
+    #urllib.request.urlretrieve(imageurl, localfile_temp)
+
+jsonfile="heyblocq-KBcatalogus_05112019-perPagina.json"
 with open(jsonfile, encoding="UTF-8") as data_file:
     data = json.load(data_file)
 
 for i in range(len(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"])):
-    print('*'*40+str(i)) #i=0,1,2,3,4
+    print('#'*40+str(i)) #i=0,1,2,3,4
     record = data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][i]["srw:recordData"]["srw_dc:dc"].items() #tuples
     insdict=dict((k, v) for k, v in record)# https://stackoverflow.com/questions/3783530/python-tuple-to-dict
     #print(insdict)
@@ -17,58 +32,159 @@ for i in range(len(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record
         value = insdict[key] #https://realpython.com/python-keyerror/
         #print(str(key) + ":" + str(value))
 
-###creator of contribution
-    creatorlist=[]
-    creator = insdict.get('dc:creator')
-    if creator == None:
-       print('creator:Geen')
+################Extract data from all <dc:identifier> fields ##############################
+    dcid = insdict.get('dc:identifier')
+    #print('dcid = ' + str(dcid))
+
+    #Pages number(s)
+    pagelist = [dcid[j].get('dcx:anchorText').split('(')[1].split(')')[0] for j in range(len(dcid)) if
+                 dcid[j].get('dcx:anchorText') != None]  # WOW, most impressive self-written list comprehension!!!
+    print('pages:' + str(pagelist))
+
+    #Image url, KB-cat url, OCLC-id
+    xsitypelist = [(x['xsi:type'], x['content']) for x in dcid] # list of tuples
+    #print("xsitypelist = " + str(xsitypelist))
+    imagelinks = [tuple[1] for tuple in xsitypelist if 'EuropeanaTravel:131H26' in str(tuple[1])]
+    #print('imagelinks:' + str(imagelinks))
+
+    #for imageurl in imagelinks: #download the images
+        #imagedownload(imageurl)
+    #Compare last 3 digits of imageurl ('http://resolver.kb.nl/resolve?urn=EuropeanaTravel:131H26:250')
+    # to page number ('250') - they MUST be the same!
+         #if imageurl.split(':')[-1] == pagelist[0]: print('')
+         #else: print("PROBLEM WITH PAGE NUMBERING!!!!!")
+
+    kbcatlinks = [tuple[1] for tuple in xsitypelist if 'PPN' in str(tuple[1])]
+    #print('kbcatlinks:' + str(kbcatlinks))
+    oclcids = [str(tuple[1]) for tuple in xsitypelist if str(tuple[0]) == 'OCLC'] #oclc id as string
+    #print('oclc-ids:' + str(oclcids))
+
+################Extract data from all <dc:creator> fields #################################
+    dccreator = insdict.get('dc:creator')
+    print('dccreator = ' + str(dccreator))
+    #-------------------------------------
+    #output can be
+     ## None
+        #1) creator = None
+     ## String, or list of strings
+       #2) creator = Rooy, C. de
+       #3) creator = Pantogalos, Meletios (1596 - 1646)
+     ##List
+       #4) creator = ['Block, Tewis Dirckz.', 'Teunissen, Claes']
+       #5) creator = ['Helst, Lodewijk van der (1642-ca. 1684)', 'Hals, Frans (ca. 1580-1666)']
+       #6) creator = ['Cool, Joannes (-1680)', {'dcx:recordIdentifier': 'AC:069112894', 'content': 'Jacob Cats (1577-1660) (ISNI 0000 0001 0883 3136)'}]
+     ## Dict
+       #7) creator = {'dcx:recordIdentifier': 'AC:069966850', 'content': 'Johannes Cabeliau (1601-1657)'}
+          # This number '069966850' --> http://opc4.kb.nl/DB=1/XMLPRS=Y/PPN?PPN=069966850 --> NTA
+          # --> http://data.bibliotheken.nl/doc/thes/p069966850  --> WD P1006
+       #8) creator = {'dcx:recordIdentifier': 'AC:069885532', 'content': 'Antonius Aemilius (1589-1660) (ISNI 0000 0000 6135 2561)'}
+           # This number  ISNI 0000 0000 6135 2561 --> WD P213 -->  http://www.isni.org/0000+0000+6135+2561
+    #-------------------------------------
+    creatordictlist = []  # list of creatordicts
+    #-------------------------------------
+    # creatordict['name']
+    # creatordict['lifeyears']
+    # creatordict['birthyear']
+    # creatordict['birthyear_source']
+    # creatordict['deadyear']
+    # creatordict['deadyear_source']
+    # -------
+    # creatordict['nta']
+    # creatordict['nta_source']
+    # --------
+    # creatordict['isni']
+    # creatordict['isni_source']
+    #-------------------------------------
 
 
-    elif isinstance(creator, str): #creator is string
-        creatorlist.append(str(creator))
-        print('creator1:' + str(creatorlist))
-        #TODO: Reverse first and last name
+    if dccreator == None: # case 1
+        creatordict = {}
+        creatordict['name'] = 'Unkown or anonymous'
+        creatordictlist.append(creatordict)
 
-    elif isinstance(creator, list):  # creator is list
-        print('creatorrrr2:' + str(creator))
-        #creator2 = [" ".join(n.split(", ")[::-1]) for n in creator]
-        #print('creator2:' + str(creator2)) #https://www.geeksforgeeks.org/print-lists-in-python-4-different-ways/
-        #TODO: Reverse first and last name -- http://stackoverflow.com/questions/15704943/switch-lastname-firstname-to-firstname-lastname-inside-list
+    elif isinstance(dccreator, str): #creator is string, cases 2 and 3
+        creatordict = {}
+        #Reverse first, last name and lifeyears . Hard case = Bronchorst, Jan Gerritsz. van (ca. 1603-1661)
+        if '(' in str(dccreator): # creatorstring contains birth/death years)
+            firstname = dccreator.split(", ")[1].split(" (")[0]
+            lastname = dccreator.split(", ")[0]
+            creatordict['name'] = firstname.strip() + ' ' + lastname.strip()
+            lifeyears = dccreator.split(", ")[1].split(" (")[1].split(")")[0]
+            creatordict['lifeyears'] = lifeyears.strip()
+            birthyear = lifeyears.split("-")[0]
+            creatordict['birthyear'] = birthyear.strip()
+            deadyear =lifeyears.split("-")[1]
+            creatordict['deadyear'] = deadyear.strip()
+        else: creatordict['name'] = " ".join(dccreator.split(", ")[::-1]) # http://stackoverflow.com/questions/15704943/switch-lastname-firstname-to-firstname-lastname-inside-list
+        creatordictlist.append(creatordict)
 
+    elif isinstance(dccreator, list):  # creator is list, cases 4, 5 and 6
+         for person in dccreator:
+             creatordict = {}
+             print('person = '+str(person))
+             if '(' in str(person): # personstring contains birth/death years), cases 5 or 6
+                if isinstance(person, dict): #case 6 # {'dcx:recordIdentifier': 'AC:069112894', 'content': 'Jacob Cats (1577-1660) (ISNI 0000 0001 0883 3136)'}
 
+                    # NTA WD P1006
+                    ntaid = person.get('dcx:recordIdentifier')
+                    creatordict['nta'] = ntaid.split('AC:')[1].strip()
+                    # TODO: Check inbouwen om te checken dat string 'AC:' wel bestaat
 
+                    # ISNI WD P213
+                    personcontent = person.get('content') #Jacob Cats (1577-1660) (ISNI 0000 0001 0883 3136)
+                    isni = personcontent.split('(ISNI ')[1].split(')')[0]
+                    #TODO: Check inbouwen om te checken dat string '(ISNI' wel bestaat
+                    creatordict['isni'] = isni.strip()
 
-    elif isinstance(creator, dict):  # creator is dict
-        creatorlist.append(str(str(creator['content']).split(' (ISNI')[0]))
-        print('creator3:' + str(creatorlist))
-        if 'ISNI 'in str(creator['content']):
-            creator_isni = creator['content'].split(' (ISNI')[1].split(')')[0]
-            print('creator_isni:'+ str(creator_isni))
+                    #Name and lifeyears
+                    personnameyears = personcontent.split('(ISNI ')[0] #Jacob Cats (1577-1660)
+                    #TODO: Check inbouwen om te checken dat string '(ISNI' wel bestaat
 
- ###stuff for scanned contributions
-    dcid=insdict.get('dc:identifier')
-    #print(dcid)
-    dcidlist1 = [(x['xsi:type'], x['content']) for x in dcid]
-    #print("aaa" + str(dcidlist1))
-    imagageurllist=[]
-    for tuple in dcidlist1:
-        if 'PPN' in str(tuple[1]):
-            print('kbcatlink:' + str(tuple[1]))
-        if str(tuple[0]) == 'OCLC':
-            print('OCLC-id:' + str(tuple[1]))
-        if 'Travel' in str(tuple[1]):
-            imagageurllist.append(tuple[1])
-    print('imageurls:' + str(imagageurllist))
+                    #name
+                    personname=  personnameyears.split('(')[0] #Jacob Cats
+                    creatordict['name'] = personname.strip()
 
-    ###find page numbers
-    dcidlist2 = [dcid[i].get('dcx:anchorText').split('(')[1].split(')')[0] for i in range(len(dcid)) if dcid[i].get('dcx:anchorText') != None] # WOW, most impressive self-written
-            # list comprehension!!!
-    print('pages:' + str(dcidlist2))
+                    #lifeyears, birthyear, deadyear
+                    lifeyears = personnameyears.split("(")[1].split(")")[0]
+                    creatordict['lifeyears'] = lifeyears.strip()
+                    birthyear = lifeyears.split("-")[0]
+                    creatordict['birthyear'] = birthyear.strip()
+                    deadyear = lifeyears.split("-")[1]
+                    creatordict['deadyear'] = deadyear.strip()
 
-####date of contribution
+                elif isinstance(person, str): #case 5
+                    firstname = person.split(", ")[1].split(" (")[0]
+                    lastname = person.split(", ")[0]
+                    creatordict['name'] = firstname.strip() + ' ' + lastname.strip()
+                    lifeyears = person.split(", ")[1].split(" (")[1].split(")")[0]
+                    creatordict['lifeyears'] = lifeyears.strip()
+                    birthyear = lifeyears.split("-")[0]
+                    creatordict['birthyear'] = birthyear.strip()
+                    deadyear = lifeyears.split("-")[1]
+                    creatordict['deadyear'] = deadyear.strip()
+                    #print('AAAAAAA '+ str(creatordict))
+             else:
+                 creatordict['name'] = " ".join(person.split(", ")[::-1]) # case 4
+             creatordictlist.append(creatordict)
+
+    # TODO: Uitwerken als dccreator een dict is, case 7 and 8
+    elif isinstance(dccreator, dict):  # creator is dict
+    #     creatorlist.append(str(str(creator['content']).split(' (ISNI')[0]))
+    #     print('creator3:' + str(creatorlist))
+    #     if 'ISNI 'in str(creator['content']):
+    #         creator_isni = creator['content'].split(' (ISNI')[1].split(')')[0]
+    #         print('creator_isni:'+ str(creator_isni))
+    else:
+        creatordict = {}
+        creatordictlist = []  # list of creatordicts
+    print('creatordictlist= ' + str(creatordictlist))
+
+################Extract data from all <dc:date> fields #################################
     date=insdict.get('dc:date')
     date2 = re.sub(r'[\[\]]', '', str(date)) #https://stackoverflow.com/questions/44528081/remove-square-brackets-from-a-list-of-characters
-    print('date:'+str(date2))
+    #print('date:'+str(date2))
+
+#record 237 heeft 2 date-velden!
 
 ####lanuage of contribution - NEED WORK
     language=insdict.get('dc:language')
