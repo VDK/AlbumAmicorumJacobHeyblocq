@@ -1,6 +1,8 @@
 # Album amicorum Jacob Heyblocq
 Datastory & visualisation of Jacob Heyblocq's album amicorum using Wikidata & Wikimedia Commons (and maybe Wikipedia)
 
+* https://www.wikidata.org/wiki/Wikidata:WikiProject_Alba_amicorum/Jacob_Heyblocq
+
 *https://www.kb.nl/themas/vriendenboeken/verwoede-verzamelaars/jacob-heyblocqs-vriendenboek
 
 *https://nl.wikipedia.org/wiki/Jacobus_Heiblocq
