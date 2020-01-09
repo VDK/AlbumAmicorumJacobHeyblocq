@@ -3,9 +3,30 @@ import json
 import requests
 import re
 import urllib
+import numpy as np
+import pandas as pd
 from urllib.request import urlretrieve
 
-#download all album images to imagefolder
+#https://www.geeksforgeeks.org/counting-the-frequencies-in-a-list-using-dictionary-in-python/
+def CountFrequency(my_list):
+    # Creating an empty dictionary
+    freq = {}
+    pictures = ['Tekening', 'Gravure', 'Ets', 'Knipwerk']
+    piccounter=0
+    for item in my_list:
+        if item in pictures:
+           piccounter += 1
+        if (item in freq):
+            freq[item] += 1
+        else:
+            freq[item] = 1
+    for key, value in freq.items():
+        print("* % s : % s" % (key, value))
+
+    #Tel het aantal afbeeldingen (pictures)
+    print('Aantal afbeeldingen (= ' + str(pictures).replace('[','').replace(']','').replace("'",'') + ') in dit album = ' + str(piccounter))
+
+    #download all album images to imagefolder
 def imagedownload(imageurl):
     outputdirname="images"
     current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -18,34 +39,46 @@ def imagedownload(imageurl):
     #print(localfile_temp)
     #urllib.request.urlretrieve(imageurl, localfile_temp)
 
+
+# convert SRU-XML to JSON via https://www.oxygenxml.com/xml_json_converter.html
 jsonfile="heyblocq-KBcatalogus_05112019-perPagina.json"
 with open(jsonfile, encoding="UTF-8") as data_file:
     data = json.load(data_file)
 
+formaten=[] #List all possible values of dc:terms:hasformat
+talen=[] #List all possible languages of contributions
+titels=[] #Lit of all contribution titles
+creator_overall_dict = {}
+
 for i in range(len(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"])):
-    print('#'*40+str(i)) #i=0,1,2,3,4
+    print('/'*10 + ' Record number ' + str(i) + ' ' + '/'*40) #i=0,1,2,3,4
     record = data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][i]["srw:recordData"]["srw_dc:dc"].items() #tuples
     insdict=dict((k, v) for k, v in record)# https://stackoverflow.com/questions/3783530/python-tuple-to-dict
     #print(insdict)
     keys=insdict.keys()
     for key in keys:
         value = insdict[key] #https://realpython.com/python-keyerror/
-        #print(str(key) + ":" + str(value))
+       #print(str(key) + ":" + str(value))
 
 ################Extract data from all <dc:identifier> fields ##############################
+    # 1 Page number
+    # 2 Resolver URL of image P18
+    # 3 KB-cat resolver URL
+    # 4 OCLC control number --> https://www.wikidata.org/wiki/Property:P243 --> https://www.worldcat.org/oclc/902911736
+
     dcid = insdict.get('dc:identifier')
     #print('dcid = ' + str(dcid))
 
-    #Pages number(s)
+    #1 Pages number
     pagelist = [dcid[j].get('dcx:anchorText').split('(')[1].split(')')[0] for j in range(len(dcid)) if
                  dcid[j].get('dcx:anchorText') != None]  # WOW, most impressive self-written list comprehension!!!
     print('pages:' + str(pagelist))
 
-    #Image url, KB-cat url, OCLC-id
+    #2 Resolver URL of image P18
     xsitypelist = [(x['xsi:type'], x['content']) for x in dcid] # list of tuples
     #print("xsitypelist = " + str(xsitypelist))
     imagelinks = [tuple[1] for tuple in xsitypelist if 'EuropeanaTravel:131H26' in str(tuple[1])]
-    #print('imagelinks:' + str(imagelinks))
+    print('imagelinks:' + str(imagelinks))
 
     #for imageurl in imagelinks: #download the images
         #imagedownload(imageurl)
@@ -54,21 +87,33 @@ for i in range(len(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record
          #if imageurl.split(':')[-1] == pagelist[0]: print('')
          #else: print("PROBLEM WITH PAGE NUMBERING!!!!!")
 
+    #3 KB-cat resolver URL // can have more than one value (image 155)
     kbcatlinks = [tuple[1] for tuple in xsitypelist if 'PPN' in str(tuple[1])]
-    #print('kbcatlinks:' + str(kbcatlinks))
+    print('kbcatlinks:' + str(kbcatlinks))
+
+    #4 OCLC control number --> https://www.wikidata.org/wiki/Property:P243 --> https://www.worldcat.org/oclc/902911736
+    #Can have more than one value (image 155)
     oclcids = [str(tuple[1]) for tuple in xsitypelist if str(tuple[0]) == 'OCLC'] #oclc id as string
-    #print('oclc-ids:' + str(oclcids))
+    print('oclc-id-P243:' + str(oclcids))
+    oclcurls = ['https://www.worldcat.org/oclc/' + str(oclcids[i]) for i in range(len(oclcids))]
+    print('oclc-urls:' + str(oclcurls))
 
 ################Extract data from all <dc:creator> fields #################################
+    # 1 Name of creator/contributor --> P170 (creator) en P767 (contributor)
+    # 2 NTA-id of creator --> P1006 --> http://data.bibliotheken.nl/id/thes/p098254065
+    # 3 ISNI of creator --> P213 --> http://www.isni.org/0000000117452212
+    # 4 Year of birth --> P569
+    # 5 Year of death --> P570
+
     dccreator = insdict.get('dc:creator')
-    print('dccreator = ' + str(dccreator))
+    #print('dccreator = ' + str(dccreator))
     #-------------------------------------
     #output can be
      ## None
         #1) creator = None
      ## String, or list of strings
        #2) creator = Rooy, C. de
-       #3) creator = Pantogalos, Meletios (1596 - 1646)
+       #3) creator = Pantogalos, Meletios (1596 - 1646) or creator = Junius, Wilhelmus (ca. 1633-)" or 'Quina jr., Jacob (-1699)' or 'Ens, Joannes (ca. 1623?-)'
      ##List
        #4) creator = ['Block, Tewis Dirckz.', 'Teunissen, Claes']
        #5) creator = ['Helst, Lodewijk van der (1642-ca. 1684)', 'Hals, Frans (ca. 1580-1666)']
@@ -77,8 +122,11 @@ for i in range(len(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record
        #7) creator = {'dcx:recordIdentifier': 'AC:069966850', 'content': 'Johannes Cabeliau (1601-1657)'}
           # This number '069966850' --> http://opc4.kb.nl/DB=1/XMLPRS=Y/PPN?PPN=069966850 --> NTA
           # --> http://data.bibliotheken.nl/doc/thes/p069966850  --> WD P1006
-       #8) creator = {'dcx:recordIdentifier': 'AC:069885532', 'content': 'Antonius Aemilius (1589-1660) (ISNI 0000 0000 6135 2561)'}
+       #8) creator = {"dcx:recordIdentifier": "AC:069430594","content": "Gulielmus d' Amour (ISNI 0000 0003 9604 2223)"}
+       #9) creator = {'dcx:recordIdentifier': 'AC:069885532', 'content': 'Antonius Aemilius (1589-1660) (ISNI 0000 0000 6135 2561)'}
            # This number  ISNI 0000 0000 6135 2561 --> WD P213 -->  http://www.isni.org/0000+0000+6135+2561
+
+
     #-------------------------------------
     creatordictlist = []  # list of creatordicts
     #-------------------------------------
@@ -96,16 +144,21 @@ for i in range(len(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record
     # creatordict['isni_source']
     #-------------------------------------
 
-
     if dccreator == None: # case 1
+        ## None
+        # 1) creator = None
         creatordict = {}
-        creatordict['name'] = 'Unkown or anonymous'
+        creatordict['name'] = 'N.N.'
         creatordictlist.append(creatordict)
 
-    elif isinstance(dccreator, str): #creator is string, cases 2 and 3
+    elif isinstance(dccreator, str): #creator is string, cases 2, 3
+        ## String, or list of strings
+        # 2) creator = Rooy, C. de
+        # 3) creator = Pantogalos, Meletios (1596 - 1646) or creator = Junius, Wilhelmus (ca. 1633-)"
+        # or 'Quina jr., Jacob (-1699)' or 'Ens, Joannes (ca. 1623?-)'
         creatordict = {}
         #Reverse first, last name and lifeyears . Hard case = Bronchorst, Jan Gerritsz. van (ca. 1603-1661)
-        if '(' in str(dccreator): # creatorstring contains birth/death years)
+        if ('(' in str(dccreator) and '-' in str(dccreator)) : # Case 2), creatorstring contains birth/death years)
             firstname = dccreator.split(", ")[1].split(" (")[0]
             lastname = dccreator.split(", ")[0]
             creatordict['name'] = firstname.strip() + ' ' + lastname.strip()
@@ -115,267 +168,270 @@ for i in range(len(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record
             creatordict['birthyear'] = birthyear.strip()
             deadyear =lifeyears.split("-")[1]
             creatordict['deadyear'] = deadyear.strip()
-        else: creatordict['name'] = " ".join(dccreator.split(", ")[::-1]) # http://stackoverflow.com/questions/15704943/switch-lastname-firstname-to-firstname-lastname-inside-list
+        else: #Case 3), no birth/death years
+            creatordict['name'] = " ".join(dccreator.split(", ")[::-1]) # http://stackoverflow.com/questions/15704943/switch-lastname-firstname-to-firstname-lastname-inside-list
         creatordictlist.append(creatordict)
 
     elif isinstance(dccreator, list):  # creator is list, cases 4, 5 and 6
-         for person in dccreator:
+        ##List
+        # 4) creator = ['Block, Tewis Dirckz.', 'Teunissen, Claes']
+        # 5) creator = ['Helst, Lodewijk van der (1642-ca. 1684)', 'Hals, Frans (ca. 1580-1666)']
+        # 5a) ["Arenbergh, Jan van (1628-voor 1670)", "N.N."]
+        # 6) creator = ['Cool, Joannes (-1680)', {'dcx:recordIdentifier': 'AC:069112894', 'content': 'Jacob Cats (1577-1660) (ISNI 0000 0001 0883 3136)'}]
+        for person in dccreator:
              creatordict = {}
-             print('person = '+str(person))
-             if '(' in str(person): # personstring contains birth/death years), cases 5 or 6
+             #print('person = '+str(person))
+             if ('(' in str(person) and '-' in str(person)): # personstring contains birth/death years), cases 5 or 6
                 if isinstance(person, dict): #case 6 # {'dcx:recordIdentifier': 'AC:069112894', 'content': 'Jacob Cats (1577-1660) (ISNI 0000 0001 0883 3136)'}
-
                     # NTA WD P1006
                     ntaid = person.get('dcx:recordIdentifier')
-                    creatordict['nta'] = ntaid.split('AC:')[1].strip()
-                    # TODO: Check inbouwen om te checken dat string 'AC:' wel bestaat
-
+                    if 'AC:' in ntaid:
+                        creatordict['nta'] = ntaid.split('AC:')[1].strip()
+                        creatordict['nta-url'] = 'http://data.bibliotheken.nl/id/thes/p' + str(creatordict['nta'])
+                    else:pass
+                        #creatordict['nta'] = "Geen NTA-id gevonden"
                     # ISNI WD P213
                     personcontent = person.get('content') #Jacob Cats (1577-1660) (ISNI 0000 0001 0883 3136)
-                    isni = personcontent.split('(ISNI ')[1].split(')')[0]
-                    #TODO: Check inbouwen om te checken dat string '(ISNI' wel bestaat
-                    creatordict['isni'] = isni.strip()
+                    if '(ISNI' in personcontent:
+                        isni = personcontent.split('(ISNI ')[1].split(')')[0]
+                        creatordict['isni'] = isni.strip()
+                        creatordict['isni-url']  = 'http://www.isni.org/' + str(creatordict['isni'].replace(' ','+'))
+                        #Name and lifeyears
+                        personnameyears = personcontent.split('(ISNI ')[0] #Jacob Cats (1577-1660)
+                        #name
+                        personname=  personnameyears.split('(')[0] #Jacob Cats
+                        creatordict['name'] = personname.strip()
+                        #lifeyears, birthyear, deadyear
+                        lifeyears = personnameyears.split("(")[1].split(")")[0]
+                        creatordict['lifeyears'] = lifeyears.strip()
+                        birthyear = lifeyears.split("-")[0]
+                        creatordict['birthyear'] = birthyear.strip()
+                        deadyear = lifeyears.split("-")[1]
+                        creatordict['deadyear'] = deadyear.strip()
+                    else:pass
+                        #creatordict['isni'] = "Geen ISNI gevonden"
 
-                    #Name and lifeyears
-                    personnameyears = personcontent.split('(ISNI ')[0] #Jacob Cats (1577-1660)
-                    #TODO: Check inbouwen om te checken dat string '(ISNI' wel bestaat
-
-                    #name
-                    personname=  personnameyears.split('(')[0] #Jacob Cats
-                    creatordict['name'] = personname.strip()
-
-                    #lifeyears, birthyear, deadyear
-                    lifeyears = personnameyears.split("(")[1].split(")")[0]
-                    creatordict['lifeyears'] = lifeyears.strip()
-                    birthyear = lifeyears.split("-")[0]
-                    creatordict['birthyear'] = birthyear.strip()
-                    deadyear = lifeyears.split("-")[1]
-                    creatordict['deadyear'] = deadyear.strip()
-
-                elif isinstance(person, str): #case 5
-                    firstname = person.split(", ")[1].split(" (")[0]
-                    lastname = person.split(", ")[0]
-                    creatordict['name'] = firstname.strip() + ' ' + lastname.strip()
-                    lifeyears = person.split(", ")[1].split(" (")[1].split(")")[0]
-                    creatordict['lifeyears'] = lifeyears.strip()
-                    birthyear = lifeyears.split("-")[0]
-                    creatordict['birthyear'] = birthyear.strip()
-                    deadyear = lifeyears.split("-")[1]
-                    creatordict['deadyear'] = deadyear.strip()
-                    #print('AAAAAAA '+ str(creatordict))
-             else:
-                 creatordict['name'] = " ".join(person.split(", ")[::-1]) # case 4
+                elif isinstance(person, str): #case 5 'Helst, Lodewijk van der (1642-ca. 1684)
+                    if ('(' in str(person) and '-' in str(person)):
+                        firstname = person.split(", ")[1].split(" (")[0]
+                        lastname = person.split(", ")[0]
+                        creatordict['name'] = firstname.strip() + ' ' + lastname.strip()
+                        lifeyears = person.split(", ")[1].split(" (")[1].split(")")[0]
+                        creatordict['lifeyears'] = lifeyears.strip()
+                        birthyear = lifeyears.split("-")[0]
+                        creatordict['birthyear'] = birthyear.strip()
+                        deadyear = lifeyears.split("-")[1]
+                        creatordict['deadyear'] = deadyear.strip()
+                        #print('AAAAAAA '+ str(creatordict))
+                    else:  # Case 4), no birth/death years 'Block, Tewis Dirckz.'
+                        creatordict['name'] = " ".join(person.split(", ")[::-1])
+             else: #case 5a, the N.N. in ["Arenbergh, Jan van (1628-voor 1670)", "N.N."]
+                 creatordict['name'] = "N.N."
              creatordictlist.append(creatordict)
 
-    # TODO: Uitwerken als dccreator een dict is, case 7 and 8
-    elif isinstance(dccreator, dict):  # creator is dict
-    #     creatorlist.append(str(str(creator['content']).split(' (ISNI')[0]))
-    #     print('creator3:' + str(creatorlist))
-    #     if 'ISNI 'in str(creator['content']):
-    #         creator_isni = creator['content'].split(' (ISNI')[1].split(')')[0]
-    #         print('creator_isni:'+ str(creator_isni))
-    else:
+    elif isinstance(dccreator, dict):  # creator is dict, case 7, 8 and 9
+        #Dict
+        # 7) creator = {'dcx:recordIdentifier': 'AC:069966850', 'content': 'Johannes Cabeliau (1601-1657)'}
+        # 8) creator = {"dcx:recordIdentifier": "AC:069430594", 'content': "Gulielmus d' Amour (ISNI 0000 0003 9604 2223)"}
+        # 9) creator = {'dcx:recordIdentifier': 'AC:069885532', 'content': 'Antonius Aemilius (1589-1660) (ISNI 0000 0000 6135 2561)'}
         creatordict = {}
-        creatordictlist = []  # list of creatordicts
+        # NTA WD P1006
+        ntaid = dccreator.get('dcx:recordIdentifier') #AC:069966850
+        if 'AC:' in ntaid:
+            creatordict['nta'] = ntaid.split('AC:')[1].strip()
+            creatordict['nta-url'] = 'http://data.bibliotheken.nl/id/thes/p' + str(creatordict['nta'])
+        else:pass
+             #creatordict['nta'] = "Geen NTA-id gevonden"
+
+        content = dccreator.get('content')
+        # 'Johannes Cabeliau (1601-1657)' or
+        # 'Gulielmus d' Amour (ISNI 0000 0003 9604 2223)' or
+        # 'Antonius Aemilius (1589-1660) (ISNI 0000 0000 6135 2561)'
+
+        # ISNI WD P213
+        if '(ISNI' in content: # 'Gulielmus d' Amour (ISNI 0000 0003 9604 2223)' or 'Antonius Aemilius (1589-1660) (ISNI 0000 0000 6135 2561)'
+            isni = content.split('(ISNI ')[1].split(')')[0]
+            creatordict['isni'] = isni.strip()
+            creatordict['isni-url'] = 'http://www.isni.org/' + str(creatordict['isni'].replace(' ', '+'))
+
+            nameyears = content.split('(ISNI ')[0] #Antonius Aemilius (1589-1660) or 'Gulielmus d' Amour'
+            if ('(' in str(nameyears) and '-' in  str(nameyears)): #Antonius Aemilius (1589-1660)
+                name = nameyears.split('(')[0]
+                creatordict['name'] = name.strip()
+                # lifeyears, birthyear, deadyear
+                lifeyears = nameyears.split("(")[1].split(")")[0]
+                creatordict['lifeyears'] = lifeyears.strip()
+                birthyear = lifeyears.split("-")[0]
+                creatordict['birthyear'] = birthyear.strip()
+                deadyear = lifeyears.split("-")[1]
+                creatordict['deadyear'] = deadyear.strip()
+            else:   #'Gulielmus d' Amour'
+                creatordict['name'] = nameyears.strip()
+        else:#creatordict['isni'] = "Geen ISNI gevonden" #'Johannes Cabeliau (1601-1657)'
+            pass
+
+            if ('(' in str(content) and '-' in  str(content)): #'Johannes Cabeliau (1601-1657)'
+                name = content.split('(')[0]
+                creatordict['name'] = name.strip()
+                # lifeyears, birthyear, deadyear
+                lifeyears = content.split("(")[1].split(")")[0]
+                creatordict['lifeyears'] = lifeyears.strip()
+                birthyear = lifeyears.split("-")[0]
+                creatordict['birthyear'] = birthyear.strip()
+                deadyear = lifeyears.split("-")[1]
+                creatordict['deadyear'] = deadyear.strip()
+            else:   #'Gulielmus d' Amour'
+                creatordict['name'] = content.strip()
+        creatordictlist.append(creatordict)
+    else: pass
+        #creatordict = {}
+        #creatordictlist = []  # list of creatordicts
     print('creatordictlist= ' + str(creatordictlist))
 
+    #TODO Create overall list (or dict or Pandas dataframe?) of all [creatordictlist] (including all N.N.s) to make Excel out of
+    # First colum = pagenumber = pagelist[0]
+    # Second = [creatordictlist]
+    creator_overall_dict[pagelist[0]] = creatordictlist
+
+
 ################Extract data from all <dc:date> fields #################################
+    # Date of contributions, can have more than 1 value per page (p 155)
+    # record 237, 248 en 155 hebben elk 2 date-velden! en 2 bijdragers!!
+
     date=insdict.get('dc:date')
     date2 = re.sub(r'[\[\]]', '', str(date)) #https://stackoverflow.com/questions/44528081/remove-square-brackets-from-a-list-of-characters
-    #print('date:'+str(date2))
+    print('date of contribution:'+str(date2))
 
-#record 237 heeft 2 date-velden!
+################Extract data from all <dc:language> fields #################################
+ # Language of textual contribution, in English, can have more than 1 value/language per page (p.223)
+    # Case 1: No lang of contrib is provided, eg. when the contribution is an image without caption
+    # Case 2: Lang is dict (contrib has one single language)
+    # Case 3: Lang is list of dicts (contrib has multiple languages)
+    dclanguage=insdict.get('dc:language')
+    #print(str(dclanguage))
+    if dclanguage == None:  #Case 1: No lang of contrib is provided eg. when the contribution is an image without caption
+        print('No language of contribution given, is it an captionless image?')
+        talen.append(dclanguage)
+    elif isinstance(dclanguage, dict): #Case 2: Lang is dict (contrib has one single language)
+        lang = dclanguage.get('content')
+        print('language of contribution:' + str(lang))
+        talen.append(lang)
+    elif isinstance(dclanguage, list): #Case 3: Lang is list of dicts (contrib has multiple languages)
+        langlist = [dclanguage[i].get('content') for i in range(len(dclanguage))]
+        print('languages of contribution:' + str(langlist))
+        [talen.append(langlist[j]) for j in range(len(langlist))]
+    else: print("GEEEEN TAAAAAAAAALLLL")
 
-####lanuage of contribution - NEED WORK
-    language=insdict.get('dc:language')
-    #print('language:'+str(language))
 
-print('='*100)
-print('='*100)
+#TODO
+################## Extract data from all dcterms:hasFormat fields
 
-#     #============================================================================
-#
-#     ppn_long = finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][i], "dcx:recordIdentifier")#PRB01:175094691
-#     ppn = ppn_long.split(":")[1]#175094691
-#
-#     title = finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][book], "dc:title")
- #   date = finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][i],"dc:date")
- #   print(data)
-#     objectholder = finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][book],"dcx:recordRights") #in welke collectie zit het boek?
-#     booksize = finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][book], "dcterms:extent")
-#
-#     thumbnail=finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][book],"dcx:thumbnail")
-#     thumb_url=thumbnail['content']        #http://resolver.kb.nl/resolve?urn=urn:gvn:PRB01:6333948X&role=thumbnail
-#     thumb_baseurl=thumb_url.split("&")[0] #http://resolver.kb.nl/resolve?urn=urn:gvn:PRB01:6333948X
-#
-#     contributorlist=finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][book],"dc:contributor")
-#     auteurlist=[]
-#     auteurstring=""
-#     drukkerlist=[]
-#     drukkerstring=""
-#     uitgeverlist=[]
-#     uitgeverstring=""
-#     if str(contributorlist) != "None":
-#         if isinstance(contributorlist, dict): # contributorlist = dict
-#             if contributorlist['dcx:role'] == "uitgever":
-#                 #switch around lastname and firstname of drukker, uitgever, author - see http://stackoverflow.com/questions/15704943/switch-lastname-firstname-to-firstname-lastname-inside-list
-#                 uitgeverstring=" / ".join(contributorlist['content'].split(": ")[::-1])
-#             elif contributorlist['dcx:role'] == "drukker":
-#                 drukkerstring=" / ".join(contributorlist['content'].split(": ")[::-1])
-#             elif contributorlist['dcx:role'] == "auteur":
-#                 auteurstring=" / ".join(contributorlist['content'].split(": ")[::-1])
-#             else: print("AAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAAAAAA")
-#
-#         else: # contributorlist = list of dicts
-#             for dic in contributorlist:
-#                 if dic['dcx:role'] == "uitgever":
-#                     uitgeverlist.append(dic['content'])
-#                     #switch around lastname and firstname of drukker, uitgever, authors - see http://stackoverflow.com/questions/15704943/switch-lastname-firstname-to-firstname-lastname-inside-list
-#                     uitgeverlist2=[" / ".join(uitgever.split(": ")[::-1]) for uitgever in uitgeverlist]
-#                 elif dic['dcx:role'] == "drukker":
-#                     drukkerlist.append(dic['content'])
-#                     drukkerlist2=[" / ".join(drukker.split(": ")[::-1]) for drukker in drukkerlist]
-#                 elif dic['dcx:role'] == "auteur":
-#                     auteurlist.append(dic['content'])
-#                     auteurlist2=[" ".join(auteur.split(", ")[::-1]) for auteur in auteurlist]
-#                 else: print("AAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAAAAAA")
-#             uitgeverstring='; '.join(map(str, uitgeverlist2))
-#             drukkerstring='; '.join(map(str, drukkerlist2))
-#             auteurstring='; '.join(map(str, auteurlist2))
-#             #print(str(auteurstring))
-#
-#     taglist=finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][book],"dc:subject")
-#     tagstring = ""
-#     #taglist can either be a string or a list[] of strings
-#     #http://www.decalage.info/en/python/print_list
-#     if str(taglist) != "None":
-#         if isinstance(taglist, str): #taglist is een string
-#             tagstring=str(taglist)
-#         else: #taglist is een list[] of strings
-#             tagstring=', '.join(map(str, taglist))
-#
-#     alternativelist=finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][book],"dcterms:alternative")
-#     alternativestring = ""
-#     if str(alternativelist) != "None":
-#         if isinstance(alternativelist, str):
-#             alternativestring=str(alternativelist)
-#         else:
-#             alternativestring=' '.join(map(str, alternativelist))
-#
-#     descriptionlist=finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][book],"dc:description")
-#     descriptionstring = ""
-#     if str(descriptionlist) != "None":
-#         if isinstance(descriptionlist, str):
-#             descriptionstring=str(descriptionlist)
-#         else:
-#             descriptionstring=' -- '.join(map(str, descriptionlist))
-#
-#     annotationlist=finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][book],"dcx:annotation")
-#     annotationstring = ""
-#     if str(annotationlist) != "None":
-#         if isinstance(annotationlist, str):
-#             annotationstring=str(annotationlist)
-#         else:
-#             annotationstring='</li><li>'.join(map(str, annotationlist))
-#
-#     identifier=finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][book],"dc:identifier")
-#     GvNwebsiteURL=[]
-#     dci_list=[d['content'] for d in identifier]
-#     for item in dci_list:
-#         if str(item).startswith("http"):
-#             GvNwebsiteURL.append(item)
-#
-#     ispartoflist=finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][book],"dcterms:isPartOf")
-#     thisParentID=""
-#     for dic in ispartoflist:
-#         if dic['xsi:type'] == "parent":
-#             thisParentID=str(dic['content'])
-#
-#     #============================================================================
-#
-#     file=str(ppn)+".html"
-#     HTMLoutputfile = open(str(ppn)+".html", "w")
-#     HTMLoutputfile.write("<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN' 'http://www.w3.org/TR/REC-html40/strict.dtd'>")
-#     HTMLoutputfile.write("<html>")
-#     HTMLoutputfile.write("<head>")
-#     HTMLoutputfile.write("<title>Beelden voor GVN:PRB01 -- PPN=" +ppn+"</title>")
-#     HTMLoutputfile.write("<meta http-equiv='content-type' content='text/html;charset=utf-8'/>")
-#     HTMLoutputfile.write("<link href='../lightbox/dist/css/lightbox.css' rel='stylesheet'>")
-#     HTMLoutputfile.write("</head>")
-#     HTMLoutputfile.write("<body>")
-#     HTMLoutputfile.write("<a href='../index.html'><< Terug naar overzichtspagina</a></style>")
-#     HTMLoutputfile.write("<h1>Collectie GVN:PRB01 -- PPN= "+ppn+"</h1>")
-#     HTMLoutputfile.write("<img src='"+thumb_url+"' align='left' vspace='0' hspace='10'/>")
-#     HTMLoutputfile.write("<h2>"+str(title)+"</h2>")
-#
-#     if alternativestring:
-#         HTMLoutputfile.write("<b>Alternatieve titel(s):</b> "+alternativestring+"<br/><br/>")
-#
-#     HTMLoutputfile.write("<b>Jaar van uitgave:</b> "+str(date)+"<br/><br/>")
-#
-#     if auteurstring:
-#         HTMLoutputfile.write("<b>Auteur(s):</b> "+auteurstring+"<br/>")
-#     if uitgeverstring:
-#         HTMLoutputfile.write("<b>Naam / plaats uitgever(s):</b> "+uitgeverstring+"<br/>")
-#     if drukkerstring:
-#         HTMLoutputfile.write("<b>Naam / plaats drukker(s):</b> "+drukkerstring+"<br/>")
-#
-#     if descriptionstring:
-#         HTMLoutputfile.write("<br/><b>Beschrijving:</b> "+descriptionstring+"<br/><br/>")
-#     if booksize:
-#         HTMLoutputfile.write("<b>Afmetingen:</b> "+booksize+"<br/>")
-#     if annotationstring:
-#         HTMLoutputfile.write("<b>Opmerkingen:</b><ul><li> "+annotationstring+"</li></ul>")
-#     if tagstring:
-#         HTMLoutputfile.write("<b>Tags:</b> "+tagstring+"<br/><br/>")
-#
-#     HTMLoutputfile.write("Dit boek is onderdeel van de collectie van de "+str(objectholder)+"</br/><br/>")
-#     HTMLoutputfile.write("Boek op het GvN: <a href='"+GvNwebsiteURL[0]+"'>"+GvNwebsiteURL[0]+"</a><br/>")
-#     HTMLoutputfile.write("Beschrijving boek in de KB-catalogus: <a href='http://opc4.kb.nl/PPN?PPN="+ppn+"'>http://opc4.kb.nl/PPN?PPN="+ppn+"</a><br/><br/>")
-#
-#     rowwidth=5
-#     maximages=100
-#     numberofimages =0
-#     for i in range(0,int(maximages/rowwidth)+1):
-#         for j in range(1,rowwidth+1):
-#             r = requests.head(thumb_url+"&count="+str(rowwidth*i+j)+"&role=page")
-#             if int(r.status_code) == 200:
-#                 HTMLoutputfile.write("<a data-lightbox='"+ppn+"' href='"+thumb_baseurl+"&role=page&count=" + str(rowwidth*i+j) + "&role=image&size=large'><img src='"+thumb_url+"&count="+str(rowwidth*i+j)+"&role=page'/></a>")
-#                 numberofimages=numberofimages+1
-#     HTMLoutputfile.write("<br/><br/>")
-#     HTMLoutputfile.write("Aantal beelden = "+  str(numberofimages) +"<br/><br/>")
-#
-#     #find related books based on same parentID
-#     if thisParentID:
-#         boekstring="<ol>"
-#         teller=0
-#         for boek in range(len(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"])):
-#             ispartoflist2=finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][boek],"dcterms:isPartOf")
-#             #print(ispartoflist2)
-#             parentID=""
-#             for dic2 in ispartoflist2:
-#                 if dic2['xsi:type'] == "parent":
-#                     parentID=str(dic2['content'])
-#             if parentID == thisParentID:
-#                 ppn_lang = finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][boek], "dcx:recordIdentifier")#PRB01:175094691
-#                 ppn2=ppn_lang.split(":")[1]#175094691
-#                 title2=finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][boek], "dc:title")
-#                 thumbnail2=finditem(data["srw:searchRetrieveResponse"]["srw:records"]["srw:record"][boek],"dcx:thumbnail")
-#                 thumb_url2=thumbnail2['content']
-#                 boekstring = boekstring + "<li><img src='"+thumb_url2+"' width='50' align='center'/>&nbsp;&nbsp;<a href='"+ppn2+".html'>"+title2.split(" / ")[0]+"</a><br/><br/></li>"
-#                 teller=teller+1
-#         HTMLoutputfile.write("<b>Alle "+str(teller)+" boeken in de serie "+thisParentID+":</b>"+boekstring+"</ol>")
-#
-#     HTMLoutputfile.write("<script src='../lightbox/dist/js/lightbox-plus-jquery.js'></script>")
-#     HTMLoutputfile.write("</body>")
-#     HTMLoutputfile.write("</html>")
-#     HTMLoutputfile.close()
-#
-#     #make html code beautiful // indent and stuff
-#     inputfile = open(file, "r")
-#     soup = BeautifulSoup(inputfile, 'html.parser')
-#     inputfile.close()
-#     outputfile = open(file, "w")
-#     outputfile.write(soup.prettify())
-#     outputfile.close()
+    hasformat=insdict.get('dcterms:hasFormat') #can be None, dict or list of dicts
+    #print('format of contribution:'+str(hasformat))
+
+    if hasformat == None:  #Case 1: No hasformat is provided
+        print('No format of contribution given')
+        formaten.append(hasformat)
+    elif isinstance(hasformat, dict): #Case 2: hasformat is dict (
+        format = hasformat.get('content')
+        print('format of contribution:' + str(format))
+        formaten.append(format)
+    elif isinstance(hasformat, list): #Case 3: Lang is list of dicts (contrib has multiple languages)
+        formatlist = [hasformat[i].get('content') for i in range(len(hasformat))]
+        print('format of contribution:' + str(formatlist))
+        [formaten.append(formatlist[j]) for j in range(len(formatlist))]
+    else: print("GEEEEN FORMAAATTT")
+
+# TODO ################## Extract data from all dcterms:extent fields
+    # We'll interpet this field to be the materials used for the contribution --> https://www.wikidata.org/wiki/Property:P186 'Material used'
+    extent=insdict.get('dcterms:extent')
+    print('Material of contribution:'+str((extent).split(',')))
+    #Inkt (kleur: bruin, zwart, ..) ,
+    # linnen,
+    # mica,
+    # houtskool?,
+    # leer + goud (boekbanden)
+    # nog toevoegen --> Jeroen om hulp vragen . Deze info staat niet in de catalogus, ergens anders wel?
+
+# TODO ################## Extract data from all dc:title fields
+    #dctitle=insdict.get('dc:title')
+    #title=dctitle.get('content')
+    #print('Titel of contribution:'+str(title))
+    #titels.append(title)
+
+    # As the standard titles are often not good for Wikidata (180 occurances of just 'Albuminscriptie'), we'll need to construct
+    # an improved title : title + 'door' + contributor
+
+# TODO ################## Extract data from all dc:subject fields
+
+# TODO ################## Extract data from all dcx:annotation fields --> <dcx:annotation dcx:label="illustratievermelding">ill</dcx:an
+
+#TODO Make Excel exports of data so far, for further processing and OpenRefine --> look at smart servier work
+# Make small, individual Excels, not make one large one for all data
+# for instance, make Excels of
+# 1) Contributors
+# 2) ....
+# 3)
+# 4)
+
+
+
+
+# Make Excels of contributors + Check against exsisting 'jacob-heyblocq-bijdragers.xlsx'
+# List all contributors, sorted by page number
+print('/'*100)
+print('All contributors to album, sorted by page number:')
+#https://stackoverflow.com/questions/9001509/how-can-i-sort-a-dictionary-by-key
+unique_contributors={}
+
+dfcolumns = ['page','name', 'birthyear', 'deadyear','nta','nta-url','isni','isni-url']
+df = pd.DataFrame(columns=dfcolumns)
+
+for key in sorted(creator_overall_dict):
+    for dict in creator_overall_dict[key]:
+        page=key
+        naam = dict.get('name')
+        gebjaar = dict.get('birthyear')
+        sterfjaar = dict.get('deadyear')
+        nta = dict.get('nta')
+        ntaurl = dict.get('nta-url')
+        isni = dict.get('isni')
+        isniurl = dict.get('isni-url')
+        contribtuple= (page, naam, gebjaar, sterfjaar, nta, ntaurl, isni, isniurl)
+        #print(tuple)
+        #print(list(tuple))
+        #https://stackoverflow.com/questions/53500735/appending-a-list-as-dataframe-row
+        s = pd.Series(list(contribtuple), index=df.columns)
+        df = df.append(s, ignore_index=True)
+
+        # Lijst met unieke bijdragers en de pagina's waaraan ze bijdroegen:
+        # #Moet worden: unique_contributors={'Jacob van der Does' : ['291','297','298'], }
+        #unique_contributors = set(dict.values())
+        #print(unique_contributors)#[naam] = pagelist
+
+print(df)
+#df.to_excel("contributors-nieuiwenaamverzinnenwantdeebestaatal.xlsx")
+
+
+
+    #if dictiter >1 :
+    #    print('XXXXXXXX LET OP: Aan pagina ' + str(key) + ' hebben meerdere personen bijgedragen')
+
+#print(unique_contributors)
+
+
+################## Extract data from all dcterms:isPartOf fields
+# We will omit this one, as it always  <dcterms:isPartOf dcx:recordIdentifier="AC:310919592">Album amicorum van J. Heyblocq...
+
+print('/'*100)
+# Aggregates lists
+print('-' * 100)
+#print('List (and numbers) of distinct types of contribution formats')
+#CountFrequency(formaten)
+#print('-' * 100)
+#print('List (and numbers) of languages of contributions')
+#CountFrequency(talen)
+#print('-' * 100)
+#print('List (and numbers) of titles of contributions')
+#CountFrequency(titels)
 
