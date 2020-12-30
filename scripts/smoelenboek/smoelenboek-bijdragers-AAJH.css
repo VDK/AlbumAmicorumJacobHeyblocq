@@ -1,0 +1,26 @@
+/*https://stackoverflow.com/questions/54633409/how-to-align-images-horizontally-side-by-side-with-captions-underneath*/
+  .fiveColumnGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    grid-column-gap: 10px;
+    grid-row-gap: 10px;
+  }
+  figure.fiveColumnGridItem {
+    display: block;
+    padding: 10px;
+    text-align: left;
+    background-color: #DDD;
+    margin-inline-start: 0;
+    margin-inline-end: 0;  
+  }
+  figure.fiveColumnGridItem img {
+    display: block; 
+    width: 100%;
+  }
+  figure.fiveColumnGridItem figurecaption {
+    display:block; 
+    width: 100%; 
+    font-size: 1rem; 
+    margin: 3;
+    align:center;
+  }
